@@ -1,0 +1,19 @@
+# Ignore Python's cache and virtual environments
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+venv/
+env/
+
+# Ignore Docker and Git files
+Dockerfile
+docker-compose.yml
+.dockerignore
+.git
+.gitignore
+
+# Ignore temporary local files
+temp_*.pdf
+
+# Note: We don't ignore .env file anymore as it's needed for the application to work
