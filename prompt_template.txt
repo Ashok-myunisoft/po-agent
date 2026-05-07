@@ -190,6 +190,11 @@ json{
     "company": "string",
     "address": {
       "line1": "string",
+      "line2": "string",
+      "line3": "string",
+      "state": "string",
+      "postal_code": "string",
+      
       // ... complete address structure
     }
   },
