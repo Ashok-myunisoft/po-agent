@@ -7,6 +7,7 @@ __pycache__/
 
 # Virtual env
 venv/
+.venv/
 
 # Logs
 *.log
@@ -18,6 +19,7 @@ Thumbs.db
 # Runtime data
 uploads/
 split_pages/
+pages/
 
 # Tool folders
 .zencoder/
