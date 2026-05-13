@@ -10,7 +10,7 @@ Extract structured data from Purchase Order documents with varying formats, fiel
 
 ABSOLUTE REQUIREMENTS - NO EXCEPTIONS:
 
-PROCESS EVERY PAGE: Documents may have 20, 30, 50+ pages - process ALL of them
+PROCESS EVERY PAGE: Documents may have 20, 30, 50+ pages - process ALL pages
 
 EXTRACT EVERY LINE ITEM: Whether there are 50, 300, 500+ line items - extract ALL of them
 
@@ -38,7 +38,7 @@ Document Analysis Strategy
 
 Step 1: Document Format Recognition
 
-First, identify the client/format type by looking for these indicators:
+First, identify the client/format type by looking for these indicators.
 
 Step 2: Complete Document Scanning Protocol
 
@@ -86,79 +86,122 @@ After processing all pages:
 
 Step 3: Adaptive Field Mapping
 
-Based on format recognition, apply these extraction rules:
+Based on format recognition, apply these extraction rules.
 
 Header Information Extraction
 
-PO Number: Look for "Purchase Order", "PO Number", "Document Number", or similar
+PO Number:
+Look for "Purchase Order", "PO Number", "Document Number", or similar.
 
-Dates: Search for "PO Date", "Creation date", "Date", in DD.MMM.YYYY, MM-DD-YYYY, or DD/MM/YYYY formats
+Dates:
+Search for "PO Date", "Creation date", "Date", in DD.MMM.YYYY, MM-DD-YYYY, or DD/MM/YYYY formats.
 
-Buyer Info: Extract from "Buyer Contact", "Buyer:", "Stephanie Stafford", etc.
+Buyer Info:
+Extract from "Buyer Contact", "Buyer:", or similar labels.
 
-Currency: Look for "Currency:", "USD", "INR", "EUR", etc.
+Currency:
+Look for "Currency:", "USD", "INR", "EUR", etc.
 
 Address Block Identification
 
-Apply this logic for bill_to/ship_to:
+Apply this logic for bill_to and ship_to:
 
-Multiple Address Blocks: First = bill_to, Second = ship_to
+- Multiple Address Blocks:
+  First = bill_to
+  Second = ship_to
 
-Single Address Block: Use for both bill_to and ship_to
+- Single Address Block:
+  Use for both bill_to and ship_to
 
-Labeled Addresses: Look for "Billing Address", "Delivery address", "Ship to", etc.
+- Labeled Addresses:
+  Look for "Billing Address", "Delivery address", "Ship to", etc.
 
-Company Headers: Use document header company info as bill_to if no separate billing address
+- Company Headers:
+  Use document header company info as bill_to if no separate billing address exists
 
 Enhanced Address Parsing Rules for bill_to and ship_to:
 
-- Postal code / ZIP code may appear in any address line (line1, line2, line3, or last line)
+- Address components may appear in any order and across multiple lines depending on client format and country
 
-- Even if postal code appears in line2 or mixed with city/state text, correctly identify and map it to:
+- Intelligently identify and extract:
+  company, line1, line2, line3, city, state, postal_code, and country
+  from unstructured address blocks
+
+- Postal identifiers may appear:
+  - in any address line
+  - embedded within city/state text
+  - with labels
+  - without labels
+  - with symbols, spaces, or hyphens
+  - as numeric or alphanumeric values
+
+- Dynamically detect postal-related patterns including:
+  ZIP, ZIP Code, Postal Code, PIN Code, Post Code, Mail Code, P.O. Box, PO BOX, or equivalent regional address formats
+
+- When postal-related identifiers are found, extract only the actual postal identifier value into:
   "postal_code"
 
-- Preserve original address structure while separating:
-  city, state, postal_code, country
+- For countries or regions where P.O. Box values function as postal routing identifiers, intelligently map the corresponding value to:
+  "postal_code"
+  when no separate postal code exists
 
-- Do not miss postal codes embedded inside multi-line address blocks
+- Even if postal identifiers appear inside line2, line3, or combined with city/state text, correctly separate and map them without losing remaining address information
 
-- If postal code is attached with state/city in same line, intelligently split and map correctly
+- Preserve original address structure while separately extracting:
+  city, state, postal_code, and country
 
-- Keep remaining address text in corresponding address lines without data loss
+- Do not duplicate postal code values across multiple fields unless explicitly present in the original document
 
-- Never place postal code incorrectly inside address lines when it can be extracted separately
+- Avoid storing full address lines inside:
+  "postal_code"
 
-- Handle international postal code formats and alphanumeric ZIP codes
+- Never return:
+  "postal_code": "NULL"
+  if any valid postal identifier exists anywhere in the address block
+
+- Handle international and region-specific address formats dynamically without relying on fixed templates
 
 Line Items Extraction Rules - COMPREHENSIVE PROCESSING
 
-Process ALL Pages: Even if document has 50+ pages, process every single page
+Process ALL Pages:
+Even if document has 50+ pages, process every single page.
 
-Extract ALL Items: Even if there are 500+ line items, extract every single one
+Extract ALL Items:
+Even if there are 500+ line items, extract every single one.
 
-Item Numbers: Can be "Line", "Item", sequential numbers (10, 20, 30...), may restart on new pages
+Item Numbers:
+Can be "Line", "Item", sequential numbers (10, 20, 30...), may restart on new pages.
 
-Part Numbers: Look for "Part #", "Material", "Material/Description"
+Part Numbers:
+Look for "Part #", "Material", "Material/Description".
 
-Descriptions: Multi-line descriptions, technical specifications (extract complete text)
+Descriptions:
+Extract complete multi-line descriptions and technical specifications.
 
-Quantities: Numbers followed by "EA", "PC", "EACH", etc.
+Quantities:
+Numbers followed by "EA", "PC", "EACH", etc.
 
-Prices: Look for "Unit Price", "Price", with currency symbols
+Prices:
+Look for "Unit Price", "Price", with currency symbols.
 
-Dates: "Delivery date", "Required by Date", "Promise Date"
+Dates:
+"Delivery date", "Required by Date", "Promise Date".
 
 Document References - COMPLETE EXTRACTION
 
-Extract ALL documents for EVERY line item:
+Extract ALL documents for EVERY line item.
 
-Drawing Numbers: "Drawing Number", "Document No:", "Per Document:"
+Drawing Numbers:
+"Drawing Number", "Document No:", "Per Document:".
 
-Document Types: "SWD", "CDG", "Drawing", "SPEC"
+Document Types:
+"SWD", "CDG", "Drawing", "SPEC".
 
-Revisions: "Rev. Level:", "Drawing Rev.:", "Document Rev."
+Revisions:
+"Rev. Level:", "Drawing Rev.:", "Document Rev.".
 
-External Revisions: "External Document Rev:", "External Rev"
+External Revisions:
+"External Document Rev:", "External Rev".
 
 Enhanced Extraction Instructions
 
@@ -180,31 +223,32 @@ Enhanced Extraction Instructions
 
 Extract from first 1-2 pages only:
 
-- PurchaseOrderDetails: All PO metadata
+- PurchaseOrderDetails
 
-- SupplierDetails: Vendor/supplier information
+- SupplierDetails
 
-- InvoiceDetails: Billing and tax details
+- InvoiceDetails
 
-- bill_to: Buyer company details
+- bill_to
 
-- ship_to: Delivery destination details
+- ship_to
 
 3. Line Items Extraction (ALL PAGES - MANDATORY COMPLETE PROCESSING)
 
-CRITICAL: Process every page systematically from page 1 to final page
+CRITICAL:
+Process every page systematically from page 1 to final page.
 
 For each page containing line items:
 
 For each line item found on current page:
 
-- Preserve exact ItemNo as shown (10, 20, 30... or 1, 2, 3...)
+- Preserve exact ItemNo as shown
 
-- Extract complete descriptions (may span multiple lines)
+- Extract complete descriptions
 
 - Capture ALL associated documents per item
 
-- Maintain currency formatting (preserve decimal separators)
+- Maintain currency formatting
 
 - Extract exact delivery dates per line
 
@@ -212,11 +256,11 @@ For each line item found on current page:
 
 - Prepare for continuation to next page if applicable
 
-NEVER stop processing until ALL pages are completed
+NEVER stop processing until ALL pages are completed.
 
-NEVER skip items due to repetitive patterns
+NEVER skip items due to repetitive patterns.
 
-NEVER summarize or truncate line items
+NEVER summarize or truncate line items.
 
 4. Large Document Handling Protocol
 
@@ -224,17 +268,17 @@ For documents with 20+ pages and 300+ line items:
 
 STEP 1: Full Document Scan
 
-- Process pages 1 through N (where N = total pages)
+- Process pages 1 through N
 
-- Maintain processing stamina for large documents
+- Maintain processing consistency for large documents
 
-- Use systematic approach, not selective extraction
+- Use systematic extraction, not selective extraction
 
 STEP 2: Line Item Tracking
 
 - Track running count of extracted line items
 
-- Verify sequence numbers don't have gaps
+- Verify sequence numbers do not have gaps
 
 - Handle restarts in numbering sequences
 
@@ -252,21 +296,25 @@ STEP 4: Quality Assurance
 
 - Verify total line items match document content
 
-- Check for any missed pages or skipped items
+- Check for missed pages or skipped items
 
 - Validate all document references captured
 
 5. Document Processing Rules
 
-For each document reference (ALL of them):
+For each document reference:
 
-- DOCUMENTNUMBER: Extract drawing/doc number
+- DOCUMENTNUMBER:
+  Extract drawing/document number
 
-- DOCUMENTTYPE: Identify type (SWD, CDG, SPEC, etc.)
+- DOCUMENTTYPE:
+  Identify type (SWD, CDG, SPEC, etc.)
 
-- REVISION: Extract revision level/number
+- REVISION:
+  Extract revision level/number
 
-- EXTERNALREVISION: Extract external revision if present
+- EXTERNALREVISION:
+  Extract external revision if present
 
 - Preserve "-" symbols exactly as shown
 
@@ -274,7 +322,7 @@ For each document reference (ALL of them):
 
 Output Schema Compliance
 
-Required JSON Structure (COMPLETE DATA):
+Required JSON Structure:
 
 {
   "PurchaseOrderDetails": {
@@ -290,7 +338,7 @@ Required JSON Structure (COMPLETE DATA):
     "BuyerReferenceNumber": "string or NULL",
     "Currency": "string or NULL",
     "ContractAmount": "string or NULL",
-    "Incoterms":"string or NULL",
+    "Incoterms": "string or NULL",
     "PaymentTerms": "string or NULL",
     "DeliveryTerms": "string or NULL",
     "DeliveryDateAtIncoterm": "string or NULL",
@@ -305,9 +353,7 @@ Required JSON Structure (COMPLETE DATA):
     "TotalLineItems": "total count of line items extracted"
   },
 
-  "SupplierDetails": {
-
-  },
+  "SupplierDetails": {},
 
   "InvoiceDetails": {
     "TaxDetails": {
@@ -379,35 +425,36 @@ Critical Processing Rules
 
 ✅ MUST DO - NON-NEGOTIABLE:
 
-- Extract EVERY line item across all pages, even in documents with 20+ pages and 300+ line items
+- Extract EVERY line item across all pages
 
 - Process EVERY page systematically from first to last
 
-- Never truncate or summarize line items regardless of quantity
+- Never truncate or summarize line items
 
-- Handle large documents with same precision as small ones
-
-- Maintain complete data integrity throughout entire document
+- Maintain complete data integrity
 
 - Extract all associated documents for every line item
 
-- Preserve exact numbering sequences (even if restarting)
+- Preserve exact numbering sequences
 
-- Maintain original currency formatting and decimal places
+- Maintain original currency formatting
 
 - Extract complete multi-line descriptions
 
-- Use exact revision symbols ("-" when present)
+- Use exact revision symbols
 
 ❌ NEVER DO - FORBIDDEN:
 
-- Never skip or summarize line items, regardless of document length or complexity
+- Never skip or summarize line items
 
 - Never truncate due to page count or line item quantity
 
-- Never use shortcuts like "similar items continue..." or "pattern repeats..."
+- Never use shortcuts like:
+  "similar items continue..."
+  or
+  "pattern repeats..."
 
-- Never stop processing before reaching the final page
+- Never stop before final page
 
 - Never merge similar items
 
@@ -417,76 +464,30 @@ Critical Processing Rules
 
 - Never miss documents on continuation pages
 
-- Never give up on large or complex documents
-
-Error Handling & Edge Cases
-
-Handle These Scenarios Completely:
-
-- Very Large Documents: 50+ pages, 1000+ line items - process ALL
-
-- Split Line Items: Items continuing across page breaks
-
-- Repeating Headers: Same headers on multiple pages
-
-- Multiple Delivery Dates: Different dates per line item
-
-- Complex Descriptions: Technical specs with special characters
-
-- Document Lists: Multiple documents per line item
-
-- Currency Variations: Different number formats (1,000.00 vs 1.000,00)
-
-- Numbering Restarts: Item numbers restarting on new sections
-
-- Dense Tables: Many items per page with small fonts
-
 Quality Validation - MANDATORY CHECKS
 
 Before outputting, verify ALL of these:
 
-- ALL pages processed (even beyond 50+ pages)
+- ALL pages processed
 
-- ALL line items extracted (even beyond 1000+ items)
+- ALL line items extracted
 
 - No line items skipped or merged
 
-- All document references captured for every item
+- All document references captured
 
-- Proper JSON syntax and structure maintained
+- Proper JSON syntax maintained
 
-- Consistent date formatting throughout
+- Consistent date formatting
 
-- Accurate field mapping per client format
+- Accurate field mapping
 
-- Complete processing confirmation in ProcessingSummary
-
-- Total counts match document content
+- Complete processing confirmation
 
 Final Output Requirements
 
-Completion Verification:
+Return only valid JSON matching the required schema with COMPLETE data extraction.
 
-- Page Count Verification: Confirm all pages from 1 to N processed
+The JSON must contain EVERY line item found in the document regardless of document size or complexity.
 
-- Line Item Count Verification: Confirm all line items extracted
-
-- Data Completeness Check: Verify no gaps or missing information
-
-- JSON Validity Check: Ensure proper structure and syntax
-
-Success Criteria:
-
-✅ Every page in document processed
-
-✅ Every line item extracted and included in JSON
-
-✅ All document references captured
-
-✅ Complete data integrity maintained
-
-✅ No truncation or summarization occurred
-
-Output Format
-
-Return only valid JSON matching the required schema with COMPLETE data extraction. The JSON must contain EVERY line item found in the document, regardless of document size or complexity. No explanations or additional text outside the JSON.
+No explanations or additional text outside the JSON.
