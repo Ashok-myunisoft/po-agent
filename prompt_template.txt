@@ -74,6 +74,107 @@ Priority lookup order for bill_to:
 3. NEVER assign the Supplier block as bill_to — if a block contains
    "Supplier Code", "GSL:", or "Contact Person" it is the supplier, not bill_to.
  
+   ddress Block Identification — Baker Hughes PO Format
+ 
+STEP 1 — Identify the Supplier block first and EXCLUDE it from bill_to/ship_to logic.
+A block is the SUPPLIER block if it contains ANY of these signals:
+  - "Supplier Code:", "GSL:", "Site Code:", "Contact Person:"
+  - "E-Mail:SALES...", "P:597...", or similar supplier contact patterns
+  - The supplier company name matching the left-column entity
+NEVER assign the Supplier block as bill_to or ship_to.
+ 
+STEP 2 — Identify Ship To block.
+Look for the rotated or inline label "Ship To" or "Ship" in the right column, top cell.
+The address block under/beside that label = ship_to.
+This is typically the Baker Hughes buyer entity's physical location.
+ 
+STEP 3 — Identify Bill To block using this PRIORITY ORDER:
+ 
+  PRIORITY 1 — Explicit invoice/billing label (check these phrases in order):
+    "Paper invoice mail to:", "Invoice mail to:", "Bill To", "Billing Address",
+    "Submit invoice via", "Email invoice:", "AE_PO_Invoice", "Inv. queries:"
+    → The address block immediately associated with this label = bill_to
+    → Extract the physical mailing address from this block if present
+    → If the block contains ONLY email/platform instructions (Ariba, email address)
+       with NO physical street address, treat as PRIORITY 2 (no physical bill_to found)
+ 
+  PRIORITY 2 — No physical bill_to address found:
+    → Use ship_to address for bill_to as well (copy ship_to into bill_to exactly)
+    → This applies when the "Bill To" block contains only:
+       email addresses, Ariba platform instructions, helpdesk contacts,
+       or web submission instructions — with no street/city/country
+ 
+  PRIORITY 3 — Fallback if neither label exists:
+    → Use the document header company address (top of page 1) as bill_to
+    → Use ship_to address as bill_to if header also lacks a physical address
+ 
+STEP 4 — Cross-check rule:
+  If bill_to and ship_to resolve to the same company and address, that is valid —
+  output the same address in both fields. Do NOT leave either as NULL.
+ 
+═══════════════════════════════════════════════════════════
+Enhanced Address Parsing Rules — postal_code Extraction
+═══════════════════════════════════════════════════════════
+ 
+Postal identifiers appear in many formats across countries. Apply ALL rules below:
+ 
+RULE 1 — Numeric postal code BEFORE city name (China / India style):
+  Pattern: a standalone 5-6 digit number appearing before or inline with city name
+  Examples:
+    "215026 SUZHOU"           → postal_code: "215026", city: "SUZHOU"
+    "641050 COIMBATORE"       → postal_code: "641050", city: "COIMBATORE"
+    "200072 Shanghai"         → postal_code: "200072", city: "Shanghai"
+  Rule: Extract the numeric value only into postal_code. Remove it from line fields.
+ 
+RULE 2 — Zip Code / ZIP CODE label (with or without space before number):
+  Pattern: "Zip Code", "ZIP Code", "ZIP:", "Zip Code200072" (no space — common in BH POs)
+  Examples:
+    "Zip Code200072"          → postal_code: "200072"
+    "Zip Code : 200072"       → postal_code: "200072"
+    "ZIP 90210"               → postal_code: "90210"
+  Rule: Strip the label and any separators (space, colon, dash). Extract number only.
+  CRITICAL: Even when there is NO space between "Zip Code" and the number,
+            still extract the numeric portion correctly.
+ 
+RULE 3 — P.O.Box as postal_code (UAE / Gulf region):
+  Pattern: "P.O.Box", "P.O. Box", "PO Box", "POBox", "PO BOX", "P.O.BOX"
+           followed by optional separator then a number
+  Separators to strip: " - ", " – ", ": ", " # ", space only, no separator
+  Examples:
+    "P.O.Box - 61302"         → postal_code: "61302"
+    "P.O.Box - 61302 ,JAFZA"  → postal_code: "61302"  (remove from line, keep "JAFZA...")
+    "PO Box 61302"            → postal_code: "61302"
+    "P.O.Box:61302"           → postal_code: "61302"
+  Rule: In UAE/Gulf addresses, P.O.Box IS the postal identifier.
+        Never return postal_code: "NULL" when a P.O.Box value exists.
+        Remove the P.O.Box portion from the address line it appeared in.
+        Keep remaining text (e.g. "JAFZA North") in its line field.
+ 
+RULE 4 — PIN Code / Post Code / Postal Code label:
+  Pattern: "PIN Code", "PIN:", "Post Code", "Postal Code", "Mail Code"
+  Examples:
+    "PIN Code: 641050"        → postal_code: "641050"
+    "Post Code 10001"         → postal_code: "10001"
+ 
+RULE 5 — Alphanumeric postal codes (UK / Canada style):
+  Pattern: letter-digit combinations like "SW1A 1AA", "M5V 3L9"
+  Rule: Extract the full alphanumeric code as-is into postal_code.
+ 
+RULE 6 — NEVER do these:
+  ✗ Never store "P.O.Box - 61302" (full string) in postal_code
+  ✗ Never store "Zip Code200072" (full string) in postal_code
+  ✗ Never return postal_code: "NULL" if ANY postal identifier exists anywhere
+    in the address block — check all lines including line1, line2, line3
+  ✗ Never duplicate the postal_code value inside line1/line2/line3 fields
+  ✗ Never store a full address line inside postal_code
+ 
+RULE 7 — Address line cleanup after extraction:
+  After extracting postal_code from any line, reconstruct that line WITHOUT
+  the postal identifier. Remaining meaningful text stays in its line field.
+  Example:
+    Original: "P.O.Box - 61302 ,JAFZA North"
+    After:    line = "JAFZA North"  |  postal_code = "61302"
+ 
 Line Items Extraction Rules - COMPREHENSIVE PROCESSING
  
 Process ALL Pages: Even if document has 50+ pages, process every single page
